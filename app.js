@@ -25,7 +25,14 @@ const app = express();
 app.use(express.json({ limit: '1mb' }));
 
 const h = (fn) => (req, res) =>
-  init().then(() => fn(req, res)).catch((e) => { console.error(e); res.status(500).json({ error: 'Lỗi máy chủ' }); });
+  init().then(() => fn(req, res)).catch((e) => {
+    console.error(e);
+    // Chẩn đoán kết nối DB (không in giá trị bí mật)
+    const u = process.env.TURSO_DATABASE_URL || '';
+    const t = process.env.TURSO_AUTH_TOKEN || '';
+    console.error('DB diag:', JSON.stringify({ url: u.replace(/\/\/[^@/]*@/, '//***@'), urlLen: u.length, tokenLen: t.length, tokenEdgeSpace: t !== t.trim(), node: process.version, status: e.cause?.status, body: String(e.cause?.message || '').slice(0, 300) }));
+    res.status(500).json({ error: 'Lỗi máy chủ' });
+  });
 const bad = (res, msg, code = 400) => res.status(code).json({ error: msg });
 const str = (v, max) => String(v ?? '').trim().slice(0, max);
 
