@@ -4,13 +4,13 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 // Trên Vercel không có file local.db và không được dùng secret mặc định → báo lỗi rõ ràng thay vì chạy sai
-if (process.env.VERCEL && (!process.env.TURSO_DATABASE_URL || (process.env.JWT_SECRET || '').length < 16))
-  throw new Error('Thiếu biến môi trường trên Vercel: cần TURSO_DATABASE_URL, TURSO_AUTH_TOKEN và JWT_SECRET (>= 16 ký tự)');
+if (process.env.VERCEL && (!process.env.APP_DB_URL || (process.env.JWT_SECRET || '').length < 16))
+  throw new Error('Thiếu biến môi trường trên Vercel: cần APP_DB_URL, APP_DB_TOKEN và JWT_SECRET (>= 16 ký tự)');
 
 const SECRET = process.env.JWT_SECRET || 'dev-secret-nho-doi-khi-deploy';
 const db = createClient({
-  url: process.env.TURSO_DATABASE_URL || 'file:local.db',
-  authToken: process.env.TURSO_AUTH_TOKEN,
+  url: process.env.APP_DB_URL || 'file:local.db',
+  authToken: process.env.APP_DB_TOKEN,
 });
 
 let ready;
@@ -25,14 +25,7 @@ const app = express();
 app.use(express.json({ limit: '1mb' }));
 
 const h = (fn) => (req, res) =>
-  init().then(() => fn(req, res)).catch((e) => {
-    console.error(e);
-    // Chẩn đoán kết nối DB (không in giá trị bí mật)
-    const u = process.env.TURSO_DATABASE_URL || '';
-    const t = process.env.TURSO_AUTH_TOKEN || '';
-    console.error('DB diag:', JSON.stringify({ url: u.replace(/\/\/[^@/]*@/, '//***@'), urlLen: u.length, tokenLen: t.length, tokenEdgeSpace: t !== t.trim(), node: process.version, status: e.cause?.status, body: String(e.cause?.message || '').slice(0, 300) }));
-    res.status(500).json({ error: 'Lỗi máy chủ' });
-  });
+  init().then(() => fn(req, res)).catch((e) => { console.error(e); res.status(500).json({ error: 'Lỗi máy chủ' }); });
 const bad = (res, msg, code = 400) => res.status(code).json({ error: msg });
 const str = (v, max) => String(v ?? '').trim().slice(0, max);
 

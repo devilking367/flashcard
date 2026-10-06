@@ -24,7 +24,7 @@ ví dụ `JWT_SECRET='abc#123'`. Nếu không, Node sẽ cắt mất phần từ
    ```
 2. Đẩy code lên GitHub, rồi trên Vercel chọn **Add New → Project** và import repo. Framework Preset để **Other**,
    không cần sửa Build/Output (đã cấu hình trong `vercel.json`).
-3. Trong **Settings → Environment Variables**, thêm 3 biến: `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `JWT_SECRET`
+3. Trong **Settings → Environment Variables**, thêm 3 biến: `APP_DB_URL`, `APP_DB_TOKEN`, `JWT_SECRET`
    (chuỗi ngẫu nhiên, ít nhất 16 ký tự). Dán giá trị **không kèm dấu nháy**.
 4. Deploy. Bảng dữ liệu tự được tạo ở lần gọi API đầu tiên. Nếu thiếu biến môi trường, API trả lỗi 500
    và log của function trên Vercel sẽ ghi rõ thiếu biến nào.
