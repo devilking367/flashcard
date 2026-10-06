@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Flashcard</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗂️</text></svg>">
+<style>
+:root{--bg:#e9edf3;--paper:#fff;--ink:#1d2433;--mu:#6b7488;--blue:#2447d6;--red:#d9483f;--line:#cfd8ea}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{display:flex;justify-content:space-between;align-items:center;padding:14px 24px;background:var(--paper);border-bottom:2px solid var(--red)}
+.logo{font:700 1.25rem Georgia,serif;color:var(--ink);text-decoration:none}
+main{max-width:760px;margin:0 auto;padding:24px 16px 64px}
+h1{font:700 2rem Georgia,serif;margin:.2em 0}h3{margin:1.6em 0 .6em}
+a{color:var(--blue)}.mu{color:var(--mu)}.c{text-align:center;justify-content:center}
+input,textarea{font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink);width:100%}
+input:focus,textarea:focus,button:focus-visible,a:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+button,.btn{font:inherit;font-weight:600;padding:10px 16px;border:0;border-radius:6px;background:var(--blue);color:#fff;cursor:pointer;text-decoration:none;display:inline-block;white-space:nowrap}
+button.ghost{background:transparent;color:var(--blue);border:1px solid var(--line)}
+button.danger{background:transparent;color:var(--red);border:1px solid var(--line)}
+.row{display:flex;gap:8px;margin:10px 0;flex-wrap:wrap;align-items:center}
+.row input{flex:1;min-width:140px}
+.auth{max-width:380px;margin:48px auto;background:var(--paper);padding:28px;border-radius:8px;border-top:4px solid var(--red)}
+.auth input{margin:6px 0}.auth button{width:100%;margin-top:10px}
+.err{color:var(--red);min-height:1.4em;margin:8px 0 0}
+.deck{display:block;background:var(--paper);padding:16px 18px;margin:10px 0;border-radius:8px;border-left:4px solid var(--blue);text-decoration:none;color:var(--ink)}
+.deck b{font:700 1.1rem Georgia,serif}
+.item input{background:var(--paper)}
+.fc{perspective:1200px;height:300px;cursor:pointer;margin:18px 0}
+.in{position:relative;height:100%;transition:transform .45s;transform-style:preserve-3d}
+.flip .in{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:28px;text-align:center;font:1.7rem/1.4 Georgia,serif;border-radius:10px;backface-visibility:hidden;border-top:3px solid var(--red);
+ background:repeating-linear-gradient(transparent 0 41px,var(--line) 41px 42px),var(--paper);box-shadow:0 2px 0 var(--line)}
+.back{transform:rotateY(180deg)}
+details{margin:10px 0}textarea{margin:8px 0}
+@media (prefers-reduced-motion:reduce){.in{transition:none}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="app.js"></script>
+</body>
+</html>
