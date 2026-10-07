@@ -33,7 +33,19 @@ button.danger{background:transparent;color:var(--red);border:1px solid var(--lin
 .face{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:28px;text-align:center;font:1.7rem/1.4 Georgia,serif;border-radius:10px;backface-visibility:hidden;border-top:3px solid var(--red);
  background:repeating-linear-gradient(transparent 0 41px,var(--line) 41px 42px),var(--paper);box-shadow:0 2px 0 var(--line)}
 .back{transform:rotateY(180deg)}
+select{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink)}label{display:inline-flex;gap:6px;align-items:center}
+.btn.ghost{background:transparent;color:var(--blue);border:1px solid var(--line)}
+.good{color:#1a7f3c;font-weight:600}.qf{position:static;min-height:160px;margin:12px 0}
+.opts{display:grid;gap:8px;margin:12px 0}.opt{text-align:left;white-space:normal;background:var(--paper)}
 details{margin:10px 0}textarea{margin:8px 0}
+button:disabled{opacity:.65;cursor:not-allowed}
+button.busy{position:relative;color:transparent!important}
+button.busy::after{content:"";position:absolute;inset:0;margin:auto;width:16px;height:16px;border:2px solid var(--spin,#fff);border-top-color:transparent;border-radius:50%;animation:sp .6s linear infinite}
+button.ghost{--spin:var(--blue)}button.danger{--spin:var(--red)}
+.loading a{pointer-events:none}.item.loading{opacity:.6}
+#app.loading::before{content:"";position:fixed;top:0;left:0;height:3px;width:40%;background:var(--blue);animation:bar 1s ease-in-out infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+@keyframes bar{from{transform:translateX(-100%)}to{transform:translateX(250%)}}
 @media (prefers-reduced-motion:reduce){.in{transition:none}}
 </style>
 </head>
