@@ -14,11 +14,16 @@ const db = createClient({
 });
 
 let ready;
-const init = () => (ready ||= db.batch([
+const init = () => (ready ||= migrate());
+const migrate = async () => {
+  await db.batch([
   `CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL UNIQUE COLLATE NOCASE, password_hash TEXT NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS decks(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, title TEXT NOT NULL, description TEXT DEFAULT '')`,
   `CREATE TABLE IF NOT EXISTS cards(id INTEGER PRIMARY KEY AUTOINCREMENT, deck_id INTEGER NOT NULL, front TEXT NOT NULL, back TEXT NOT NULL)`,
-]));
+  ]);
+  // Cột chia sẻ thêm sau: bỏ qua lỗi nếu đã có
+  await db.execute('ALTER TABLE decks ADD COLUMN share_code TEXT').catch(() => {});
+};
 const q = async (sql, args = []) => (await db.execute({ sql, args })).rows.map((r) => ({ ...r }));
 
 const app = express();
@@ -119,6 +124,39 @@ app.delete('/api/cards/:id', auth, h(async (req, res) => {
   if (!c) return bad(res, 'Không tìm thấy thẻ', 404);
   await q('DELETE FROM cards WHERE id=?', [c.id]);
   res.json({ ok: true });
+}));
+
+// ---- Chia sẻ bộ thẻ giữa các tài khoản (qua mã/liên kết; người nhận xem rồi sao chép về tài khoản mình) ----
+app.post('/api/decks/:id/share', auth, h(async (req, res) => {
+  const deck = await ownDeck(req, req.params.id);
+  if (!deck) return bad(res, 'Không tìm thấy bộ thẻ', 404);
+  const code = deck.share_code || require('crypto').randomBytes(9).toString('base64url');
+  if (!deck.share_code) await q('UPDATE decks SET share_code=? WHERE id=?', [code, deck.id]);
+  res.json({ code });
+}));
+
+app.delete('/api/decks/:id/share', auth, h(async (req, res) => {
+  const deck = await ownDeck(req, req.params.id);
+  if (!deck) return bad(res, 'Không tìm thấy bộ thẻ', 404);
+  await q('UPDATE decks SET share_code=NULL WHERE id=?', [deck.id]);
+  res.json({ ok: true });
+}));
+
+const sharedDeck = async (code) => (await q('SELECT d.id, d.user_id, d.title, d.description, u.username AS owner FROM decks d JOIN users u ON u.id=d.user_id WHERE d.share_code=?', [str(code, 40)]))[0];
+
+app.get('/api/shared/:code', auth, h(async (req, res) => {
+  const d = await sharedDeck(req.params.code);
+  if (!d) return bad(res, 'Liên kết chia sẻ không tồn tại hoặc đã bị thu hồi', 404);
+  res.json({ deck: { title: d.title, description: d.description, owner: d.owner, mine: d.user_id === req.uid, id: d.id }, cards: await q('SELECT front, back FROM cards WHERE deck_id=? ORDER BY id', [d.id]) });
+}));
+
+app.post('/api/shared/:code/copy', auth, h(async (req, res) => {
+  const d = await sharedDeck(req.params.code);
+  if (!d) return bad(res, 'Liên kết chia sẻ không tồn tại hoặc đã bị thu hồi', 404);
+  const r = await db.execute({ sql: 'INSERT INTO decks(user_id,title,description) VALUES(?,?,?)', args: [req.uid, d.title, d.description || ''] });
+  const id = Number(r.lastInsertRowid);
+  await db.execute({ sql: 'INSERT INTO cards(deck_id,front,back) SELECT ?, front, back FROM cards WHERE deck_id=?', args: [id, d.id] });
+  res.json({ id });
 }));
 
 module.exports = app;

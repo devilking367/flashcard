@@ -6,7 +6,7 @@ const api = async (p, m = 'GET', b) => {
   if (!r.ok) throw Object.assign(new Error(d.error || 'Có lỗi xảy ra'), { status: r.status });
   return d;
 };
-let user = null;
+let user = null, pending = null; // pending: trang đang muốn vào trước khi đăng nhập (vd. liên kết chia sẻ)
 
 // Khoá vùng `scope` trong lúc gọi API: chặn gửi lặp, hiện spinner. Thành công thì giữ khoá đến khi giao diện được vẽ lại
 // (route() tự gỡ); `restore` dùng cho thao tác không vẽ lại. Lỗi thì mở khoá và báo lỗi.
@@ -43,7 +43,7 @@ function authView(reg) {
     const data = Object.fromEntries(new FormData(e.target));
     busy(app, $('#f button'), async () => {
       const r = await api(reg ? '/register' : '/login', 'POST', data);
-      user = r.username; location.hash = '#/'; route();
+      user = r.username; location.hash = pending || '#/'; pending = null; route();
     }, { onError: (err) => { $('#e').textContent = err.message; } });
   };
 }
@@ -63,7 +63,7 @@ async function decksView() {
 async function deckView(id) {
   const { deck, cards } = await api('/decks/' + id);
   shell(`<p><a href="#/">← Tất cả bộ thẻ</a></p><h1>${esc(deck.title)}</h1><p class="mu">${esc(deck.description)}</p>
-  <div class="row"><a class="btn" href="#/study/${id}">Học ${cards.length} thẻ</a><a class="btn ghost" href="#/quiz/${id}">Kiểm tra</a><button class="ghost" id="ren">Đổi tên</button><button class="danger" id="del">Xoá bộ thẻ</button></div>
+  <div class="row"><a class="btn" href="#/study/${id}">Học ${cards.length} thẻ</a><a class="btn ghost" href="#/quiz/${id}">Kiểm tra</a><button class="ghost" id="ren">Đổi tên</button><button class="ghost" id="shr">${deck.share_code ? 'Quản lý chia sẻ' : 'Chia sẻ'}</button><button class="danger" id="del">Xoá bộ thẻ</button></div>
   <h3>Thêm thẻ</h3>
   <form id="f" class="row"><input name="front" placeholder="Thuật ngữ" required><input name="back" placeholder="Định nghĩa" required><button>Thêm thẻ</button></form>
   <details><summary>Nhập nhiều thẻ cùng lúc</summary><textarea id="bulk" rows="5" placeholder="Mỗi dòng một thẻ: thuật ngữ | định nghĩa"></textarea><button id="imp">Nhập thẻ</button></details>
@@ -76,6 +76,7 @@ async function deckView(id) {
     if (list.length) busy(app, $('#imp'), async () => { await api(`/decks/${id}/cards`, 'POST', { cards: list }); again(); });
   };
   $('#ren').onclick = () => { const t = prompt('Tên mới:', deck.title); if (t) busy(app, $('#ren'), async () => { await api('/decks/' + id, 'PUT', { title: t }); again(); }); };
+  $('#shr').onclick = () => shareDialog(id, deck.share_code, again);
   $('#del').onclick = () => { if (confirm('Xoá bộ thẻ này và toàn bộ thẻ bên trong?')) busy(app, $('#del'), async () => { await api('/decks/' + id, 'DELETE'); location.hash = '#/'; }); };
   document.querySelectorAll('.item').forEach((row) => {
     const cid = row.dataset.id;
@@ -93,6 +94,25 @@ const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math
 // Đổi thẻ thành cặp hỏi/đáp theo chiều học
 const ask = (c, dir) => { const rev = dir === 'bf' || (dir === 'mix' && Math.random() < 0.5); return { id: c.id, rev, q: rev ? c.back : c.front, a: rev ? c.front : c.back }; };
 const norm = (s) => String(s).normalize('NFC').trim().toLowerCase().replace(/\s+/g, ' ');
+
+const shareUrl = (code) => `${location.origin}/#/shared/${code}`;
+async function shareDialog(id, code, again) {
+  if (!code) {
+    if (!confirm('Tạo liên kết chia sẻ? Bất kỳ ai có liên kết và đã đăng nhập đều xem và sao chép được bộ thẻ này (họ không sửa được bản của bạn).')) return;
+    return busy(app, $('#shr'), async () => { code = (await api(`/decks/${id}/share`, 'POST')).code; again(); setTimeout(() => prompt('Liên kết chia sẻ:', shareUrl(code)), 300); });
+  }
+  const act = prompt(`Liên kết chia sẻ (copy bên dưới). Gõ "thu hồi" rồi OK để ngừng chia sẻ:`, shareUrl(code));
+  if (act && act.trim().toLowerCase() === 'thu hồi') busy(app, $('#shr'), async () => { await api(`/decks/${id}/share`, 'DELETE'); again(); });
+}
+
+async function sharedView(code) {
+  const { deck, cards } = await api('/shared/' + code);
+  shell(`<p><a href="#/">← Tất cả bộ thẻ</a></p><h1>${esc(deck.title)}</h1>
+  <p class="mu">Chia sẻ bởi <b>${esc(deck.owner)}</b> · ${cards.length} thẻ${deck.description ? ' · ' + esc(deck.description) : ''}</p>
+  <div class="row">${deck.mine ? `<a class="btn" href="#/deck/${deck.id}">Mở bộ thẻ của bạn</a>` : '<button id="cp">Sao chép về tài khoản của tôi</button>'}</div>
+  ${cards.map((c) => `<div class="row item"><input value="${esc(c.front)}" readonly><input value="${esc(c.back)}" readonly></div>`).join('')}`);
+  if ($('#cp')) $('#cp').onclick = () => busy(app, $('#cp'), async () => { const r = await api(`/shared/${code}/copy`, 'POST'); location.hash = '#/deck/' + r.id; });
+}
 
 async function studyView(id) {
   const { deck, cards } = await api('/decks/' + id);
@@ -183,9 +203,10 @@ async function route() {
   app.classList.add('loading');
   try {
     if (!user) { const m = await api('/me').catch(() => null); user = m && m.username; }
-    if (!user) return authView(page === 'register');
+    if (!user) { if (page === 'shared') pending = location.hash; return authView(page === 'register'); }
     if (page === 'deck') return await deckView(id);
     if (page === 'study') return await studyView(id);
+    if (page === 'shared') return await sharedView(id);
     if (page === 'quiz') return await quizView(id);
     return await decksView();
   } catch (e) {
